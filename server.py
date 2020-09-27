@@ -23,7 +23,15 @@ def connectionLoop(sock):
             clients[addr] = {}
             clients[addr]['lastBeat'] = datetime.now()
             clients[addr]['color'] = 0
-            message = {"cmd": 0,"player":{"id":str(addr)}}
+
+            #Send info of already connected clients to the new client.
+            for c in clients:
+               message2 = {"cmd": 0, "player": {"id" : str(c)}}
+               m2 = json.dumps(message2)
+               sock.sendto(bytes(m2, 'utf8'), (addr[0], addr[1]))
+
+            #Send info of new client to all curently connected clients.
+            message = {"cmd": 0, "player": {"id" : str(addr)}}
             m = json.dumps(message)
             for c in clients:
                sock.sendto(bytes(m,'utf8'), (c[0],c[1]))
@@ -31,11 +39,14 @@ def connectionLoop(sock):
 def cleanClients():
    while True:
       for c in list(clients.keys()):
+
+         #Drop client if it does not send a heartbeat in 5 seconds.
          if (datetime.now() - clients[c]['lastBeat']).total_seconds() > 5:
             print('Dropped Client: ', c)
             clients_lock.acquire()
             del clients[c]
             clients_lock.release()
+
       time.sleep(1)
 
 def gameLoop(sock):
