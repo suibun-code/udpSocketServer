@@ -36,16 +36,22 @@ def connectionLoop(sock):
             for c in clients:
                sock.sendto(bytes(m,'utf8'), (c[0],c[1]))
 
-def cleanClients():
+def cleanClients(sock):
    while True:
-      for c in list(clients.keys()):
+      #data, addr = sock.recvfrom(1024)
 
+      for c in list(clients.keys()):
          #Drop client if it does not send a heartbeat in 5 seconds.
          if (datetime.now() - clients[c]['lastBeat']).total_seconds() > 5:
             print('Dropped Client: ', c)
             clients_lock.acquire()
             del clients[c]
             clients_lock.release()
+
+           # for cl in clients:
+            #   message = {"Dropped: " : 0, "player": {"id" : str(c)}}
+            #   m = json.dumps(message)
+            #   sock.sendto(bytes(m, 'utf8'), (cl[0], cl[1]))
 
       time.sleep(1)
 
@@ -73,7 +79,7 @@ def main():
    s.bind(('', port))
    start_new_thread(gameLoop, (s,))
    start_new_thread(connectionLoop, (s,))
-   start_new_thread(cleanClients,())
+   start_new_thread(cleanClients,(s,))
    while True:
       time.sleep(1)
 
