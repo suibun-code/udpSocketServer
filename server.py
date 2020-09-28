@@ -20,17 +20,17 @@ def connectionLoop(sock):
             clients[addr]['lastBeat'] = datetime.now()
       else:
          if 'connect' in data:
+            #Send info of already connected clients to the new client.
+            for c in clients:
+               message = {"cmd": 0, "player": {"id" : str(c)}}
+               m = json.dumps(message)
+               sock.sendto(bytes(m, 'utf8'), (addr[0], addr[1]))
+
             clients[addr] = {}
             clients[addr]['lastBeat'] = datetime.now()
             clients[addr]['color'] = 0
 
-            #Send info of already connected clients to the new client.
-            for c in clients:
-               message2 = {"cmd": 0, "player": {"id" : str(c)}}
-               m2 = json.dumps(message2)
-               sock.sendto(bytes(m2, 'utf8'), (addr[0], addr[1]))
-
-            #Send info of new client to all curently connected clients.
+                        #Send info of new client to all curently connected clients.
             message = {"cmd": 0, "player": {"id" : str(addr)}}
             m = json.dumps(message)
             for c in clients:
@@ -46,10 +46,11 @@ def cleanClients(sock):
             del clients[c]
             clients_lock.release()
 
+            #Inform all clients of dropped client.
             for cl in clients:
-               message = {"Dropped: " : 0, "player": {"id" : str(c)}}
+               message = {"cmd": 2, "player": {"id" : str(c)}}
                m = json.dumps(message)
-               sock.sendto(bytes(m, 'utf8'), (cl[0], cl[1]))
+               sock.sendto(bytes(m,'utf8'), (cl[0],cl[1]))
 
       time.sleep(1)
 
@@ -58,16 +59,20 @@ def gameLoop(sock):
       GameState = {"cmd": 1, "players": []}
       clients_lock.acquire()
       print (clients)
+
       for c in clients:
          player = {}
          clients[c]['color'] = {"R": random.random(), "G": random.random(), "B": random.random()}
          player['id'] = str(c)
          player['color'] = clients[c]['color']
          GameState['players'].append(player)
+
       s=json.dumps(GameState)
       print(s)
+
       for c in clients:
          sock.sendto(bytes(s,'utf8'), (c[0],c[1]))
+
       clients_lock.release()
       time.sleep(1)
 
